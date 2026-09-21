@@ -1,0 +1,57 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  features:
+    build:
+      context: ./features
+      dockerfile: Dockerfile
+    command: python features.py
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+
+  model:
+    build:
+      context: ./model
+      dockerfile: Dockerfile
+    command: python model.py
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+
+  metric:
+    build:
+      context: ./metric
+      dockerfile: Dockerfile
+    command: python metric.py
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+
+  plot:
+    build:
+      context: ./plot
+      dockerfile: Dockerfile
+    command: python plot.py
+    depends_on:
+      - metric
+    volumes:
+      - ./logs:/app/logs
